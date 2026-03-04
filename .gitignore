@@ -1,0 +1,4 @@
+.osp
+.idea
+api/.env
+/api/composer.lock
