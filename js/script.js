@@ -213,7 +213,16 @@ function maybeToggleCalc(){
 /* ===== утилиты ===== */
 function minAtLeast(sorted, t){ for(const v of sorted){ if(v>=t) return v; } return sorted[sorted.length-1]; }
 function pickPercent(rows, qty, from='from_qty', to='to_qty', val='percent'){
-    if(!rows) return 0; for(const r of rows){ const f=+r[from]||1, tt=+r[to]||999999999; if(qty>=f && qty<=tt) return +r[val]||0; } return +rows.at(-1)?.[val]||0;
+    if(!rows) return 0;
+    // Функция для очистки строки от запятых и пробелов перед парсингом
+    const parseNum = v => Number(String(v||'').replace(/[,\s]/g, ''));
+
+    for(const r of rows){
+        const f = parseNum(r[from]) || 1;
+        const tt = parseNum(r[to]) || 999999999;
+        if(qty >= f && qty <= tt) return parseNum(r[val]) || 0;
+    }
+    return parseNum(rows.at(-1)?.[val]) || 0;
 }
 function colorMakeready(colors){
     const rows = SQ10K?.color_make_ready || VB?.COLOR_MAKE_READY || [];
