@@ -407,7 +407,6 @@ function calcVbottom(){
 
     let paperWidthForArea = B12;
     let filmCostTotal = 0;
-    let glueCostTotal = 0;
 
     let B20 = formSetup;      // Приладка
     let B21 = qty * formRate; // Формовка тиража
@@ -415,15 +414,14 @@ function calcVbottom(){
     if (hasWindow) {
         // 1. Увеличиваем приладку и формовку в 2 раза
         B20 *= 2;
-        B21 *= 2;
+        B21 *= 3;
 
         // 2. Вычитаем бумагу и добавляем пленку
         paperWidthForArea = B12 - ww;
-        const filmWidth = ww + 20; // +20мм (по 10мм с каждой стороны) на склейку пленки с бумагой
+        const filmWidth = ww + 30; // +30мм (по 15мм с каждой стороны) на склейку пленки с бумагой
 
         // Достаем данные из API (таблица TFW)
         const filmData = (VB?.TFW||[]).find(m => m.material_id === 'transparent_film') || {};
-        const glueData = (VB?.TFW||[]).find(m => m.material_id === 'glue') || {};
 
         const filmGsm = +(filmData.gsm || 40); // вес пленки (допустим 40г/м2)
         const filmPriceKg = +(filmData.price_per_kg_tg || 0);
@@ -433,12 +431,6 @@ function calcVbottom(){
         const filmB16 = qty * filmC16;
         const filmB17 = filmB16 * (1 + techP/100);
         filmCostTotal = filmB17 * filmPriceKg;
-
-        // Считаем клей. Допустим API передает consumption_kg (расход клея в кг на 1 пакет)
-        // и price_per_kg_tg (цену за кг)
-        const gluePriceKg = +(glueData.price_per_kg_tg || 0);
-        const glueConsumption = +(glueData.consumption_kg || 0.0015); // Дефолт 1.5 грамма на окно
-        glueCostTotal = qty * glueConsumption * gluePriceKg;
     }
     // ----------------------
 
@@ -454,7 +446,7 @@ function calcVbottom(){
     const B11=colorMakeready(colors);
 
     // Добавляем стоимость пленки и клея к общей себестоимости пакета
-    const B22=(B18 + filmCostTotal + glueCostTotal + B19 + B20 + B21) + B11;
+    const B22=(B18 + filmCostTotal + B19 + B20 + B21) + B11;
 
     const marginP=pickPercent(VB?.MARGIN_VB,qty,'from_qty','to_qty','percent');
     const B23=B22*(1 + marginP/100);
