@@ -1,4 +1,7 @@
-.osp
-.idea
-api/.env
+/.osp
+/.idea
+/api/.env
 /api/composer.lock
+/api/vendor
+/api/composer.json
+/api/vendor/
