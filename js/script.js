@@ -94,12 +94,17 @@ function toggleBlocks(){
     show('f-height', !isLt10k);
     show('f-colors', !isLt10k);
 
+    show('windowBlock', isV());
+
     // ручки — только квадратное
     show('handlesBlock', isSquare());
 
     // подсказки рекомендуемых — только квадратное по формулам (≥10k)
     showEl($('hintWidth'),  isSquare() && !isLt10k);
     showEl($('hintDepth'),  isSquare() && !isLt10k);
+
+    const winChecked = $('hasWindow')?.checked;
+    show('windowWidthBlock', isV() && winChecked);
 
     if (isLt10k) {
         fillReadySizes();
@@ -111,6 +116,7 @@ function toggleBlocks(){
     updateQtyWarning();
     updateRollWarning();
     updateRapportWarning();
+    checkWindowWidth();
 }
 
 /* ===== предупреждения и блокировка кнопки ===== */
@@ -171,6 +177,30 @@ function updateRollWarning(){
         $('calcBtn').disabled=true;
     }
 }
+function checkWindowWidth() {
+    const warn = $('windowWarning');
+    if (!warn) return;
+
+    if (isV() && $('hasWindow')?.checked) {
+        const w = +$('width').value || 0;
+        const ww = +$('windowWidth').value || 0;
+        const maxW = w - 80; // Ширина окна не может превышать ширина_пакета - 80мм
+
+        if (maxW <= 0) {
+            warn.innerHTML = `Ширина пакета должна быть больше 80 мм для добавления окна.`;
+            warn.classList.remove('hide');
+        } else if (ww > maxW) {
+            warn.innerHTML = `Ширина окна не может превышать <b>${maxW}</b> мм.`;
+            warn.classList.remove('hide');
+        } else {
+            warn.classList.add('hide');
+            warn.innerHTML = '';
+        }
+    } else {
+        warn.classList.add('hide');
+        warn.innerHTML = '';
+    }
+}
 function getRapportMax(){
     if(isV()){
         const arr=(VB?.RAPPORTS||[]).map(r=>r.rapport_mm).sort((a,b)=>a-b);
@@ -202,11 +232,11 @@ function updateRapportWarning(){
     }
 }
 function maybeToggleCalc(){
-    // если есть ЛЮБОЕ предупреждение или предупреждение по тиражу — блокируем
     const btn=$('calcBtn');
     const hasWarn = !$('qtyWarning').classList.contains('hide')
         || !$('rollWarning').classList.contains('hide')
-        || !$('rapportWarning').classList.contains('hide');
+        || !$('rapportWarning').classList.contains('hide')
+        || ($('windowWarning') && !$('windowWarning').classList.contains('hide')); // <-- Добавлено
     btn.disabled = hasWarn;
 }
 
@@ -350,29 +380,82 @@ function calcVbottom(){
     const formSetup=+(VB?.FORMING_VB||[]).find(i=>i.key==='forming_setup_tg')?.value_tg || 12000;
     const formRate =+(VB?.FORMING_VB||[]).find(i=>i.key==='forming_rate_per_unit_tg')?.value_tg || 3;
 
-    const B12=(w+d)*2 + rollAllow;
-    const C12=pickRapportV(h);
+    //const B12=(w+d)*2 + rollAllow;
+    //const C12=pickRapportV(h);
+//
+    //const rowsRoll=+(VB?.CONFIG_VB?.find(i=>i.key==='default_rows_per_roll')?.value||1);
+    //const rowsRap =+(VB?.CONFIG_VB?.find(i=>i.key==='default_rows_per_rapport')?.value||1);
+    //const B13=(C12/meterDiv)*qty;
+    //const B14=(B13/rowsRoll)/rowsRap;
+//
+    //const C16=(B12*C12)/areaDiv * (gsm/gsmDiv);
+    //const B16=qty*C16;
+
+    const techP=pickPercent(VB?.TECH_RESERVE_VB,qty,'from_qty','to_qty','percent');
+
+    const B12=(w+d)*2 + rollAllow; // Общая ширина развертки
+    const C12=pickRapportV(h);     // Раппорт
 
     const rowsRoll=+(VB?.CONFIG_VB?.find(i=>i.key==='default_rows_per_roll')?.value||1);
     const rowsRap =+(VB?.CONFIG_VB?.find(i=>i.key==='default_rows_per_rapport')?.value||1);
     const B13=(C12/meterDiv)*qty;
     const B14=(B13/rowsRoll)/rowsRap;
 
-    const C16=(B12*C12)/areaDiv * (gsm/gsmDiv);
+    // --- ЛОГИКА ОКОШКА ---
+    const hasWindow = $('hasWindow')?.checked;
+    const ww = +$('windowWidth').value || 0;
+
+    let paperWidthForArea = B12;
+    let filmCostTotal = 0;
+    let glueCostTotal = 0;
+
+    let B20 = formSetup;      // Приладка
+    let B21 = qty * formRate; // Формовка тиража
+
+    if (hasWindow) {
+        // 1. Увеличиваем приладку и формовку в 2 раза
+        B20 *= 2;
+        B21 *= 2;
+
+        // 2. Вычитаем бумагу и добавляем пленку
+        paperWidthForArea = B12 - ww;
+        const filmWidth = ww + 20; // +20мм (по 10мм с каждой стороны) на склейку пленки с бумагой
+
+        // Достаем данные из API (таблица TFW)
+        const filmData = (VB?.TFW||[]).find(m => m.material_id === 'transparent_film') || {};
+        const glueData = (VB?.TFW||[]).find(m => m.material_id === 'glue') || {};
+
+        const filmGsm = +(filmData.gsm || 40); // вес пленки (допустим 40г/м2)
+        const filmPriceKg = +(filmData.price_per_kg_tg || 0);
+
+        // Считаем вес пленки аналогично бумаге
+        const filmC16 = (filmWidth * C12)/areaDiv * (filmGsm/gsmDiv);
+        const filmB16 = qty * filmC16;
+        const filmB17 = filmB16 * (1 + techP/100);
+        filmCostTotal = filmB17 * filmPriceKg;
+
+        // Считаем клей. Допустим API передает consumption_kg (расход клея в кг на 1 пакет)
+        // и price_per_kg_tg (цену за кг)
+        const gluePriceKg = +(glueData.price_per_kg_tg || 0);
+        const glueConsumption = +(glueData.consumption_kg || 0.0015); // Дефолт 1.5 грамма на окно
+        glueCostTotal = qty * glueConsumption * gluePriceKg;
+    }
+    // ----------------------
+
+    // Площадь и стоимость БУМАГИ (используем paperWidthForArea вместо B12)
+    const C16=(paperWidthForArea*C12)/areaDiv * (gsm/gsmDiv);
     const B16=qty*C16;
-
-    const techP=pickPercent(VB?.TECH_RESERVE_VB,qty,'from_qty','to_qty','percent');
     const B17=B16*(1 + techP/100);
+    const B18=B17*priceKg; // Стоимость бумаги
 
-    const B18=B17*priceKg;
     const B19=B14*ratePrint;
-    const B20=formSetup;
-    const B21=qty*formRate;
 
     const colors=+$('colors').value;
     const B11=colorMakeready(colors);
 
-    const B22=(B18+B19+B20+B21)+B11;
+    // Добавляем стоимость пленки и клея к общей себестоимости пакета
+    const B22=(B18 + filmCostTotal + glueCostTotal + B19 + B20 + B21) + B11;
+
     const marginP=pickPercent(VB?.MARGIN_VB,qty,'from_qty','to_qty','percent');
     const B23=B22*(1 + marginP/100);
     const unit=B23/qty;
@@ -398,7 +481,8 @@ function calcVbottom(){
 /* ===== биндинги ===== */
 function bind(){
     $('qty').addEventListener('input', ()=>{ toggleBlocks(); maybeToggleCalc(); });
-
+    $('hasWindow')?.addEventListener('change', ()=>{ toggleBlocks(); maybeToggleCalc(); });
+    $('windowWidth')?.addEventListener('input', ()=>{ checkWindowWidth(); maybeToggleCalc(); });
     document.querySelectorAll('input[name="kind"]').forEach(el=>{
         el.addEventListener('change', ()=>{ toggleBlocks(); maybeToggleCalc(); });
     });
@@ -410,7 +494,7 @@ function bind(){
 
     // проверки рулон/раппорт
     ['input','change','blur'].forEach(ev=>{
-        $('width') ?.addEventListener(ev, ()=>{ updateRollWarning(); updateRapportWarning(); });
+        $('width') ?.addEventListener(ev, ()=>{ updateRollWarning(); updateRapportWarning(); checkWindowWidth(); });
         $('depth') ?.addEventListener(ev, ()=>{ updateRollWarning(); updateRapportWarning(); });
         $('height')?.addEventListener(ev, ()=>{                      updateRapportWarning(); });
     });

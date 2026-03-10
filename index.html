@@ -84,9 +84,21 @@
                 <div id="rapportWarning" class="warning hide"></div>
             </div>
 
-            <div id="f-height">
-                <label>Высота, мм </label>
-                <input type="number" id="height" value="300"/>
+            <div class="input-group hide" id="f-height">
+                <label for="height">Высота (мм):</label>
+                <input type="number" id="height" value="300">
+            </div>
+
+            <div class="input-group hide" id="windowBlock">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="hasWindow">
+                    <span>Добавить окошко (пленка)</span>
+                </label>
+            </div>
+            <div class="input-group hide" id="windowWidthBlock">
+                <label for="windowWidth">Ширина окна (мм):</label>
+                <input type="number" id="windowWidth" value="50">
+                <div id="windowWarning" class="warning hide" style="color: red; font-size: 0.9em; margin-top: 5px;"></div>
             </div>
 
             <div id="f-colors"><label>Количество цветов</label><select id="colors"></select></div>
