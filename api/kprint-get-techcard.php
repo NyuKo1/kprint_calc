@@ -133,21 +133,22 @@ try {
         'Width'         => $foundRow[8] ?? '',
         'Depth'         => $foundRow[9] ?? '',
         'Height'        => $foundRow[10] ?? '',
+        'Rapport'       => $foundRow[11] ?? '',
 
-        'AmountInWidth' => $foundRow[11] ?? '',
-        'PaperType'     => $foundRow[12] ?? '',
-        'Density'       => $foundRow[13] ?? '',
+        'AmountInWidth' => $foundRow[12] ?? '',
+        'PaperType'     => $foundRow[13] ?? '',
+        'Density'       => $foundRow[14] ?? '',
 
-        'HasHandles'    => $foundRow[14] ?? '',
-        'ColorCount'    => $foundRow[15] ?? '',
-        'Cliche'        => $foundRow[16] ?? '',
-        'PackageColor'  => $foundRow[17] ?? '',
-        'ColorApproval' => $foundRow[18] ?? '',
-        'PrintType'     => $foundRow[19] ?? '',
+        'HasHandles'    => $foundRow[15] ?? '',
+        'ColorCount'    => $foundRow[16] ?? '',
+        'Cliche'        => $foundRow[17] ?? '',
+        'PackageColor'  => $foundRow[18] ?? '',
+        'ColorApproval' => $foundRow[19] ?? '',
+        'PrintType'     => $foundRow[20] ?? '',
 
-        'HandleColor'   => $foundRow[21] ?? '',
-        'WindowWidth'   => $foundRow[22] ?? '',
-        'WindowHeight'  => $foundRow[23] ?? ''
+        'HandleColor'   => $foundRow[22] ?? '',
+        'WindowWidth'   => $foundRow[23] ?? '',
+        'WindowHeight'  => $foundRow[24] ?? ''
     ];
 
     // Отправляем успешный ответ
